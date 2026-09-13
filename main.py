@@ -88,10 +88,24 @@ st.caption("📌 이 그래프로 알 수 있는 것: ")
 # [5] 앞으로 그래프를 추가할 구역들
 #     (지금은 비어 있고, 나중에 여기에 그래프를 추가하면 됩니다)
 # ─────────────────────────────────────────────
-st.header("2️⃣ (추가 예정) 두 번째 그래프 구역")
-# 여기에 두 번째 그래프 코드를 작성하세요.
+st.header("2️⃣ 누적관객수 추이 (영역차트)")
+
+# 같은 영화(selected_movie)의 데이터를 사용해서
+# 기준일자별 누적관객수 변화를 영역차트(area chart)로 그립니다.
+fig2 = px.area(
+    movie_df,
+    x="기준일자",
+    y="누적관객수",
+    title=f"'{selected_movie}'의 누적관객수 변화",
+)
+fig2.update_layout(xaxis_title="날짜", yaxis_title="누적 관객수")
+
+st.plotly_chart(fig2, use_container_width=True)
+
+# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
 st.caption("📌 이 그래프로 알 수 있는 것: ")
 
 st.header("3️⃣ (추가 예정) 세 번째 그래프 구역")
+
 # 여기에 세 번째 그래프 코드를 작성하세요.
 st.caption("📌 이 그래프로 알 수 있는 것: ")
