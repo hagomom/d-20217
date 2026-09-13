@@ -105,7 +105,32 @@ st.plotly_chart(fig2, use_container_width=True)
 # 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
 st.caption("📌 이 그래프로 알 수 있는 것: ")
 
-st.header("3️⃣ (추가 예정) 세 번째 그래프 구역")
+st.header("3️⃣ 누적관객수 TOP 5 영화 비교 (다중 선그래프)")
 
-# 여기에 세 번째 그래프 코드를 작성하세요.
+# 1. "영화명"별로 TOP10(박스오피스순위 1~10)에 등장한 일수를 셉니다.
+#    이 데이터는 원래 매일 TOP10만 모아둔 데이터라, 영화명이 등장한 행 수 = TOP10 등장 일수입니다.
+top10_days_count = df["영화명"].value_counts()
+
+# 2. 20일 미만으로 등장한 영화는 제외하고, 20일 이상 등장한 영화만 남깁니다.
+qualified_movies = top10_days_count[top10_days_count >= 20].index
+
+# 3. 그 중에서 누적관객수가 가장 높은 5개 영화를 고릅니다.
+#    (movie_rank는 앞에서 만들어둔, 영화별 최신 누적관객수 내림차순 정렬 값입니다.)
+top5_movies = movie_rank[movie_rank.index.isin(qualified_movies)].head(5).index.tolist()
+
+# 전체 데이터(df)에서 top5 영화에 해당하는 행만 필터링
+top5_df = df[df["영화명"].isin(top5_movies)]
+
+fig3 = px.line(
+    top5_df,
+    x="기준일자",
+    y="누적관객수",
+    color="영화명",  # 영화별로 다른 색상 + 범례 자동 표시
+    title="TOP10 20일 이상 등장 영화 중 누적관객수 상위 5개 비교",
+)
+fig3.update_layout(xaxis_title="날짜", yaxis_title="누적 관객수", legend_title="영화명")
+
+st.plotly_chart(fig3, use_container_width=True)
+
+# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
 st.caption("📌 이 그래프로 알 수 있는 것: ")
