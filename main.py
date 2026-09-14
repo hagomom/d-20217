@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 
 # ─────────────────────────────────────────────
 # 기본 페이지 설정
@@ -202,6 +203,53 @@ fig5 = px.bar(
 fig5.update_layout(xaxis_title="연-월", yaxis_title="전체 관객수")
 
 st.plotly_chart(fig5, use_container_width=True)
+
+# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
+st.caption("📌 이 그래프로 알 수 있는 것: ")
+
+
+st.header("6️⃣ 캘린더 히트맵 (주차 × 요일)")
+
+# daily_total(기준일자별 전체 관객수 합계)을 그대로 재사용합니다.
+calendar_df = daily_total.copy()
+
+# 1. 날짜에서 "요일"을 뽑습니다. (월요일=0 ~ 일요일=6 → 한글 이름으로 변환)
+weekday_names = ["월", "화", "수", "목", "금", "토", "일"]
+calendar_df["요일"] = calendar_df["기준일자"].dt.dayofweek.map(lambda i: weekday_names[i])
+
+# 2. 날짜에서 "주차"를 뽑습니다. (월요일 시작 기준 ISO 주차, 예: 2026-W05)
+iso = calendar_df["기준일자"].dt.isocalendar()
+calendar_df["주차라벨"] = iso["year"].astype(str) + "-W" + iso["week"].astype(str).str.zfill(2)
+
+# 3. 마우스를 올렸을 때 보여줄 실제 날짜(yyyy-mm-dd) 문자열도 만들어둡니다.
+calendar_df["날짜문자열"] = calendar_df["기준일자"].dt.strftime("%Y-%m-%d")
+
+# 4. "요일 × 주차" 표 형태로 값(전체관객수)과 날짜(호버용)를 각각 피벗합니다.
+heatmap_values = calendar_df.pivot(index="요일", columns="주차라벨", values="전체관객수")
+heatmap_dates = calendar_df.pivot(index="요일", columns="주차라벨", values="날짜문자열")
+
+# 5. 요일 순서를 월요일 → 일요일 순서로 맞춥니다.
+heatmap_values = heatmap_values.reindex(weekday_names)
+heatmap_dates = heatmap_dates.reindex(weekday_names)
+
+fig6 = go.Figure(
+    data=go.Heatmap(
+        z=heatmap_values.values,
+        x=heatmap_values.columns,
+        y=heatmap_values.index,
+        text=heatmap_dates.values,  # 각 칸에 해당하는 실제 날짜
+        hovertemplate="날짜: %{text}<br>전체 관객수: %{z:,.0f}명<extra></extra>",
+        colorscale="Reds",  # 값이 클수록(관객이 많을수록) 색이 진해짐
+        colorbar=dict(title="전체 관객수"),
+    )
+)
+fig6.update_layout(
+    title="주차별 × 요일별 전체 관객수 히트맵",
+    xaxis_title="주차 (연도-주차)",
+    yaxis_title="요일",
+)
+
+st.plotly_chart(fig6, use_container_width=True)
 
 # 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
 st.caption("📌 이 그래프로 알 수 있는 것: ")
