@@ -134,3 +134,74 @@ st.plotly_chart(fig3, use_container_width=True)
 
 # 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
 st.caption("📌 이 그래프로 알 수 있는 것: ")
+
+
+# ─────────────────────────────────────────────
+# [6] 기준일자별 전체 관객수 합계 계산
+#     (여러 그래프에서 재사용할 수 있는 공통 데이터)
+# ─────────────────────────────────────────────
+# 영화 하나가 아니라, 그날 TOP10에 오른 영화들의 "해당일관객수"를 모두 더합니다.
+# → 기준일자별로 그날 TOP10 전체의 관객수 합계가 나옵니다.
+daily_total = (
+    df.groupby("기준일자")["해당일관객수"]
+    .sum()
+    .reset_index()
+    .rename(columns={"해당일관객수": "전체관객수"})
+)
+
+
+st.header("4️⃣ TOP10 전체 관객수 추이 (7일 이동평균)")
+
+# 위에서 구한 "기준일자별 전체 관객수 합계"에 대해 7일 이동평균을 계산합니다.
+# rolling(window=7): 최근 7일치 값을 이용해 평균을 구하는 방법입니다.
+daily_total["7일_이동평균"] = daily_total["전체관객수"].rolling(window=7).mean()
+
+fig4 = px.line(
+    daily_total,
+    x="기준일자",
+    y="전체관객수",
+    title="TOP10 전체 관객수 원본 vs 7일 이동평균",
+)
+# 원본 선은 연하게(살짝 투명하게) 표시
+fig4.update_traces(name="원본(일별 합계)", line=dict(width=1), opacity=0.4, showlegend=True)
+
+# 이동평균 선은 진하게 추가로 그려서 겹쳐 보이게 합니다.
+fig4.add_scatter(
+    x=daily_total["기준일자"],
+    y=daily_total["7일_이동평균"],
+    mode="lines",
+    name="7일 이동평균",
+    line=dict(width=3),
+)
+fig4.update_layout(xaxis_title="날짜", yaxis_title="관객수", legend_title="구분")
+
+st.plotly_chart(fig4, use_container_width=True)
+
+# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
+st.caption("📌 이 그래프로 알 수 있는 것: ")
+
+
+st.header("5️⃣ 월별 전체 관객수 (막대그래프)")
+
+# 위에서 구한 "기준일자별 전체 관객수 합계"(daily_total)를
+# 연-월(예: 2026-01) 단위로 다시 묶어서 합산합니다.
+daily_total["연월"] = daily_total["기준일자"].dt.to_period("M").astype(str)
+
+monthly_total = (
+    daily_total.groupby("연월")["전체관객수"]
+    .sum()
+    .reset_index()
+)
+
+fig5 = px.bar(
+    monthly_total,
+    x="연월",
+    y="전체관객수",
+    title="월별 전체 관객수 합계",
+)
+fig5.update_layout(xaxis_title="연-월", yaxis_title="전체 관객수")
+
+st.plotly_chart(fig5, use_container_width=True)
+
+# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
+st.caption("📌 이 그래프로 알 수 있는 것: ")
