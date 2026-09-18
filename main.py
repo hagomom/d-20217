@@ -1,255 +1,151 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
-# ─────────────────────────────────────────────
-# 기본 페이지 설정
-# ─────────────────────────────────────────────
-st.set_page_config(page_title="박스오피스 대시보드", layout="wide")
-st.title("🎬 박스오피스 대시보드")
+st.set_page_config(page_title="영화 데이터 그래프 도감 2 - 분포와 관계", layout="wide")
+st.title("영화 데이터 그래프 도감 2 - 분포와 관계")
 
-# 데이터가 올라와 있는 CSV 파일 주소
-DATA_URL = "https://raw.githubusercontent.com/keep-growing-park/data-science/refs/heads/main/dataset/kobis_1year_boxoffice.csv"
+DATA_URL = "https://raw.githubusercontent.com/greatsong/modudata/main/data/kobis_movies.csv"
 
 
-# ─────────────────────────────────────────────
-# [1] 데이터 불러오기 + [2] 날짜 전처리
-# ─────────────────────────────────────────────
-# @st.cache_data 를 붙이면, 같은 함수를 다시 호출해도
-# 이미 계산해둔 결과를 재사용해서 앱이 느려지지 않아요.
-# (즉, 앱이 새로고침 될 때마다 CSV를 다시 다운로드하지 않음)
 @st.cache_data
 def load_data():
-    # 1. CSV 파일을 판다스 데이터프레임으로 불러오기
+    # 1년간 박스오피스 10위권에 든 영화 216편의 요약표를 불러옵니다
     df = pd.read_csv(DATA_URL)
-
-    # 2. 결측치(빈 값)가 하나라도 있는 행은 통째로 삭제
-    df = df.dropna()
-
-    # 3. "기준일자" 컬럼을 문자열(yyyy-mm-dd)에서 진짜 날짜(datetime) 형식으로 변환
-    df["기준일자"] = pd.to_datetime(df["기준일자"], format="%Y-%m-%d")
-
-    # 4. 기준일자 순서(오래된 날짜 → 최근 날짜)로 전체 정렬
-    df = df.sort_values("기준일자").reset_index(drop=True)
-
+    # 장르가 세로막대 기호(|)로 여러 개 적힌 영화는 첫 번째 장르만 씁니다
+    df["장르"] = df["genre"].str.split("|").str[0]
     return df
 
 
-# 위에서 만든 함수를 실행해서 데이터를 준비합니다.
 df = load_data()
 
+# ── 그래프 1. 장르별 영화 편수 도넛 ──
+st.header("1. 장르별 영화 편수 (도넛)")
+genre_count = df["장르"].value_counts().reset_index()
+genre_count.columns = ["장르", "편수"]
 
-# ─────────────────────────────────────────────
-# [3] 영화 선택 기능 (누적관객수 내림차순 정렬)
-# ─────────────────────────────────────────────
-# 같은 영화가 여러 날짜에 걸쳐 나오기 때문에,
-# 영화별로 "가장 최근 누적관객수"를 기준으로 순위를 매깁니다.
-movie_rank = (
-    df.sort_values("기준일자")               # 날짜순 정렬
-    .groupby("영화명")["누적관객수"]         # 영화명별로 묶어서
-    .last()                                   # 가장 마지막(최신) 누적관객수를 가져옴
-    .sort_values(ascending=False)             # 누적관객수 내림차순 정렬
+fig1 = px.pie(
+    genre_count,
+    names="장르",
+    values="편수",
+    hole=0.45,
 )
+fig1.update_traces(hovertemplate="%{label}<br>%{value}편 (%{percent})<extra></extra>")
+st.plotly_chart(fig1, width="stretch")
+st.text_input("이 그래프로 알 수 있는 것", key="note1")
 
-# 정렬된 영화 이름 리스트 (중복 없이)
-movie_list = movie_rank.index.tolist()
+st.divider()
 
-st.sidebar.header("🔍 영화 선택")
-selected_movie = st.sidebar.selectbox(
-    "그래프로 볼 영화를 선택하세요 (누적관객수 순)",
-    movie_list,
+# ── 그래프 2. 장르 안 영화 - 트리맵 ──
+st.header("2. 장르 안에서 어떤 영화가 컸나 (트리맵)")
+fig2 = px.treemap(
+    df,
+    path=["장르", "movieNm"],
+    values="total_audi",
+    hover_data={"total_audi": True},
 )
-
-
-# ─────────────────────────────────────────────
-# [4] 선그래프 그리기 구역 1: 일별 관객수 추이
-# ─────────────────────────────────────────────
-st.header("1️⃣ 일별 관객수 추이")
-
-# 선택한 영화의 데이터만 필터링
-movie_df = df[df["영화명"] == selected_movie]
-
-fig1 = px.line(
-    movie_df,
-    x="기준일자",
-    y="해당일관객수",
-    title=f"'{selected_movie}'의 일별 관객수 변화",
-    markers=True,
+fig2.update_traces(
+    hovertemplate="<b>%{label}</b><br>총 관객: %{value:,}명<extra></extra>"
 )
-fig1.update_layout(xaxis_title="날짜", yaxis_title="해당일 관객수")
+st.plotly_chart(fig2, width="stretch")
+st.text_input("이 그래프로 알 수 있는 것", key="note2")
 
-st.plotly_chart(fig1, use_container_width=True)
+st.divider()
 
-# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
-st.caption("📌 이 그래프로 알 수 있는 것: ")
+# ── 그래프 3. 총 관객 히스토그램 ──
+st.header("3. 영화 대부분은 관객이 몇 명쯤인가 (히스토그램)")
+fig3 = px.histogram(df, x="total_audi", nbins=30)
+fig3.update_layout(xaxis_title="총 관객수", yaxis_title="영화 편수")
+st.plotly_chart(fig3, width="stretch")
 
-
-# ─────────────────────────────────────────────
-# [5] 앞으로 그래프를 추가할 구역들
-#     (지금은 비어 있고, 나중에 여기에 그래프를 추가하면 됩니다)
-# ─────────────────────────────────────────────
-st.header("2️⃣ 누적관객수 추이 (영역차트)")
-
-# 같은 영화(selected_movie)의 데이터를 사용해서
-# 기준일자별 누적관객수 변화를 영역차트(area chart)로 그립니다.
-fig2 = px.area(
-    movie_df,
-    x="기준일자",
-    y="누적관객수",
-    title=f"'{selected_movie}'의 누적관객수 변화",
+threshold = 1_000_000
+under_1m = (df["total_audi"] < threshold).sum()
+top_movie = df.loc[df["total_audi"].idxmax()]
+st.caption(
+    f"216편 중 {under_1m}편이 총 관객 {threshold:,}명에 못 미쳐 낮은 구간에 몰려 있습니다. "
+    f"가장 관객이 많은 영화는 '{top_movie['movieNm']}'({top_movie['total_audi']:,}명)입니다."
 )
-fig2.update_layout(xaxis_title="날짜", yaxis_title="누적 관객수")
+st.text_input("이 그래프로 알 수 있는 것", key="note3")
 
-st.plotly_chart(fig2, use_container_width=True)
+st.divider()
 
-# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
-st.caption("📌 이 그래프로 알 수 있는 것: ")
-
-st.header("3️⃣ 누적관객수 TOP 5 영화 비교 (다중 선그래프)")
-
-# 1. "영화명"별로 TOP10(박스오피스순위 1~10)에 등장한 일수를 셉니다.
-#    이 데이터는 원래 매일 TOP10만 모아둔 데이터라, 영화명이 등장한 행 수 = TOP10 등장 일수입니다.
-top10_days_count = df["영화명"].value_counts()
-
-# 2. 20일 미만으로 등장한 영화는 제외하고, 20일 이상 등장한 영화만 남깁니다.
-qualified_movies = top10_days_count[top10_days_count >= 20].index
-
-# 3. 그 중에서 누적관객수가 가장 높은 5개 영화를 고릅니다.
-#    (movie_rank는 앞에서 만들어둔, 영화별 최신 누적관객수 내림차순 정렬 값입니다.)
-top5_movies = movie_rank[movie_rank.index.isin(qualified_movies)].head(5).index.tolist()
-
-# 전체 데이터(df)에서 top5 영화에 해당하는 행만 필터링
-top5_df = df[df["영화명"].isin(top5_movies)]
-
-fig3 = px.line(
-    top5_df,
-    x="기준일자",
-    y="누적관객수",
-    color="영화명",  # 영화별로 다른 색상 + 범례 자동 표시
-    title="TOP10 20일 이상 등장 영화 중 누적관객수 상위 5개 비교",
+# ── 그래프 4. 스크린수 vs 총 관객 산점도 ──
+st.header("4. 스크린을 많이 받은 영화가 관객도 많나 (산점도)")
+fig4 = px.scatter(
+    df,
+    x="first_scrn",
+    y="total_audi",
+    color="장르",
+    hover_name="movieNm",
 )
-fig3.update_layout(xaxis_title="날짜", yaxis_title="누적 관객수", legend_title="영화명")
+fig4.update_layout(xaxis_title="개봉일 스크린수", yaxis_title="총 관객수")
+st.plotly_chart(fig4, width="stretch")
+st.text_input("이 그래프로 알 수 있는 것", key="note4")
 
-st.plotly_chart(fig3, use_container_width=True)
+st.divider()
 
-# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
-st.caption("📌 이 그래프로 알 수 있는 것: ")
+# ── 그래프 5. 장르별 박스플롯 ──
+st.header("5. 장르별 관객 분포는 어떻게 다른가 (박스플롯)")
+genre_counts_full = df["장르"].value_counts()
+big_genres = genre_counts_full[genre_counts_full >= 10].index
+df_box = df[df["장르"].isin(big_genres)]
 
-
-# ─────────────────────────────────────────────
-# [6] 기준일자별 전체 관객수 합계 계산
-#     (여러 그래프에서 재사용할 수 있는 공통 데이터)
-# ─────────────────────────────────────────────
-# 영화 하나가 아니라, 그날 TOP10에 오른 영화들의 "해당일관객수"를 모두 더합니다.
-# → 기준일자별로 그날 TOP10 전체의 관객수 합계가 나옵니다.
-daily_total = (
-    df.groupby("기준일자")["해당일관객수"]
-    .sum()
-    .reset_index()
-    .rename(columns={"해당일관객수": "전체관객수"})
+fig5 = px.box(
+    df_box,
+    x="장르",
+    y="total_audi",
+    hover_data=["movieNm"],
+    points="outliers",
 )
+fig5.update_traces(hovertemplate="%{customdata[0]}<br>총 관객: %{y:,}명<extra></extra>")
+fig5.update_layout(yaxis_title="총 관객수")
+st.plotly_chart(fig5, width="stretch")
+st.caption("영화가 10편 이상인 장르만 표시했습니다.")
+st.text_input("이 그래프로 알 수 있는 것", key="note5")
 
+st.divider()
 
-st.header("4️⃣ TOP10 전체 관객수 추이 (7일 이동평균)")
-
-# 위에서 구한 "기준일자별 전체 관객수 합계"에 대해 7일 이동평균을 계산합니다.
-# rolling(window=7): 최근 7일치 값을 이용해 평균을 구하는 방법입니다.
-daily_total["7일_이동평균"] = daily_total["전체관객수"].rolling(window=7).mean()
-
-fig4 = px.line(
-    daily_total,
-    x="기준일자",
-    y="전체관객수",
-    title="TOP10 전체 관객수 원본 vs 7일 이동평균",
+# ── 그래프 6. 버블 (산점도 + 첫 주 관객 크기) ──
+st.header("6. 첫 주 관객까지 넣으면 무엇이 더 보이나 (버블)")
+fig6 = px.scatter(
+    df,
+    x="first_scrn",
+    y="total_audi",
+    size="first_week_audi",
+    color="장르",
+    hover_name="movieNm",
+    size_max=45,
 )
-# 원본 선은 연하게(살짝 투명하게) 표시
-fig4.update_traces(name="원본(일별 합계)", line=dict(width=1), opacity=0.4, showlegend=True)
+fig6.update_layout(xaxis_title="개봉일 스크린수", yaxis_title="총 관객수")
+st.plotly_chart(fig6, width="stretch")
+st.text_input("이 그래프로 알 수 있는 것", key="note6")
 
-# 이동평균 선은 진하게 추가로 그려서 겹쳐 보이게 합니다.
-fig4.add_scatter(
-    x=daily_total["기준일자"],
-    y=daily_total["7일_이동평균"],
-    mode="lines",
-    name="7일 이동평균",
-    line=dict(width=3),
+st.divider()
+
+# ── 그래프 7. 국가 → 장르 선버스트 ──
+st.header("7. 국가에서 장르로 내려가면 무엇이 보이나 (선버스트)")
+fig7 = px.sunburst(
+    df,
+    path=["nation", "장르"],
+    values=None,  # 편수 기준 (기본: 행 개수)
 )
-fig4.update_layout(xaxis_title="날짜", yaxis_title="관객수", legend_title="구분")
+fig7.update_traces(hovertemplate="%{label}<br>%{value}편<extra></extra>")
+st.plotly_chart(fig7, width="stretch")
+st.text_input("이 그래프로 알 수 있는 것", key="note7")
 
-st.plotly_chart(fig4, use_container_width=True)
+st.divider()
 
-# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
-st.caption("📌 이 그래프로 알 수 있는 것: ")
-
-
-st.header("5️⃣ 월별 전체 관객수 (막대그래프)")
-
-# 위에서 구한 "기준일자별 전체 관객수 합계"(daily_total)를
-# 연-월(예: 2026-01) 단위로 다시 묶어서 합산합니다.
-daily_total["연월"] = daily_total["기준일자"].dt.to_period("M").astype(str)
-
-monthly_total = (
-    daily_total.groupby("연월")["전체관객수"]
-    .sum()
-    .reset_index()
+# ── 그래프 8. 나만의 질문 - 10위권 체류일수 vs 총 관객 산점도 ──
+my_question = "10위권에 오래 머문 영화는 총 관객도 많은가"
+st.header(f"8. {my_question} (산점도)")
+fig8 = px.scatter(
+    df,
+    x="days_in_top10",
+    y="total_audi",
+    hover_name="movieNm",
+    title=my_question,
 )
-
-fig5 = px.bar(
-    monthly_total,
-    x="연월",
-    y="전체관객수",
-    title="월별 전체 관객수 합계",
-)
-fig5.update_layout(xaxis_title="연-월", yaxis_title="전체 관객수")
-
-st.plotly_chart(fig5, use_container_width=True)
-
-# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
-st.caption("📌 이 그래프로 알 수 있는 것: ")
-
-
-st.header("6️⃣ 캘린더 히트맵 (주차 × 요일)")
-
-# daily_total(기준일자별 전체 관객수 합계)을 그대로 재사용합니다.
-calendar_df = daily_total.copy()
-
-# 1. 날짜에서 "요일"을 뽑습니다. (월요일=0 ~ 일요일=6 → 한글 이름으로 변환)
-weekday_names = ["월", "화", "수", "목", "금", "토", "일"]
-calendar_df["요일"] = calendar_df["기준일자"].dt.dayofweek.map(lambda i: weekday_names[i])
-
-# 2. 날짜에서 "주차"를 뽑습니다. (월요일 시작 기준 ISO 주차, 예: 2026-W05)
-iso = calendar_df["기준일자"].dt.isocalendar()
-calendar_df["주차라벨"] = iso["year"].astype(str) + "-W" + iso["week"].astype(str).str.zfill(2)
-
-# 3. 마우스를 올렸을 때 보여줄 실제 날짜(yyyy-mm-dd) 문자열도 만들어둡니다.
-calendar_df["날짜문자열"] = calendar_df["기준일자"].dt.strftime("%Y-%m-%d")
-
-# 4. "요일 × 주차" 표 형태로 값(전체관객수)과 날짜(호버용)를 각각 피벗합니다.
-heatmap_values = calendar_df.pivot(index="요일", columns="주차라벨", values="전체관객수")
-heatmap_dates = calendar_df.pivot(index="요일", columns="주차라벨", values="날짜문자열")
-
-# 5. 요일 순서를 월요일 → 일요일 순서로 맞춥니다.
-heatmap_values = heatmap_values.reindex(weekday_names)
-heatmap_dates = heatmap_dates.reindex(weekday_names)
-
-fig6 = go.Figure(
-    data=go.Heatmap(
-        z=heatmap_values.values,
-        x=heatmap_values.columns,
-        y=heatmap_values.index,
-        text=heatmap_dates.values,  # 각 칸에 해당하는 실제 날짜
-        hovertemplate="날짜: %{text}<br>전체 관객수: %{z:,.0f}명<extra></extra>",
-        colorscale="Reds",  # 값이 클수록(관객이 많을수록) 색이 진해짐
-        colorbar=dict(title="전체 관객수"),
-    )
-)
-fig6.update_layout(
-    title="주차별 × 요일별 전체 관객수 히트맵",
-    xaxis_title="주차 (연도-주차)",
-    yaxis_title="요일",
-)
-
-st.plotly_chart(fig6, use_container_width=True)
-
-# 그래프 해석 문구를 넣을 자리 (필요할 때 문장을 채워 넣으세요)
-st.caption("📌 이 그래프로 알 수 있는 것: ")
+fig8.update_layout(xaxis_title="10위권에 머문 날수", yaxis_title="총 관객수")
+st.plotly_chart(fig8, width="stretch")
+st.caption(f"내 질문: {my_question}")
+st.text_input("이 그래프로 알 수 있는 것", key="note8")
