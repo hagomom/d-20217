@@ -62,7 +62,11 @@ fig1 = px.pie(
 )
 fig1.update_traces(hovertemplate="%{label}<br>%{value}편 (%{percent})<extra></extra>")
 st.plotly_chart(fig1, width="stretch")
-st.text_input("이 그래프로 알 수 있는 것", key="note1")
+st.text_input(
+    "이 그래프로 알 수 있는 것",
+    key="note1",
+    value="애니메이션과 드라마가 나란히 가장 큰 두 조각을 차지하며, 둘을 합치면 전체 영화의 절반이 넘는다.",
+)
 
 st.divider()
 
@@ -87,7 +91,11 @@ else:
     st.plotly_chart(fig2, width="stretch")
     if excluded_2:
         st.caption(f"장르·영화명·총 관객 중 빠진 값이 있는 {excluded_2}편은 제외했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note2")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note2",
+        value="편수로는 작아 보이던 장르도 대작 한 편만 있으면 총 관객 기준에서는 큰 상자로 나타난다. 도넛(편수)과 트리맵(관객수)은 서로 다른 기준으로 같은 데이터를 보여준다.",
+    )
 
 st.divider()
 
@@ -113,7 +121,11 @@ else:
     )
     if excluded_3:
         st.caption(f"총 관객 값이 없는 {excluded_3}편은 제외했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note3")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note3",
+        value="대부분의 영화는 총 관객 100만 명 미만의 낮은 구간에 몰려 있고, 극소수의 대작만 오른쪽 끝에 멀리 떨어져 있다.",
+    )
 
 st.divider()
 
@@ -137,7 +149,11 @@ else:
     st.plotly_chart(fig4, width="stretch")
     if excluded_4:
         st.caption(f"스크린수 또는 총 관객 값이 없는 {excluded_4}편은 제외했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note4")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note4",
+        value="점들이 대체로 오른쪽 위로 향해 있어, 스크린을 많이 받을수록 총 관객도 많아지는 경향이 있다. 다만 그 경향에서 크게 벗어난 영화도 있다.",
+    )
 
 st.divider()
 
@@ -163,7 +179,11 @@ else:
     fig5.update_layout(yaxis_title="총 관객수")
     st.plotly_chart(fig5, width="stretch")
     st.caption("영화가 10편 이상인 장르만 표시했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note5")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note5",
+        value="장르마다 상자의 위치와 높이가 달라 관객 분포가 다르고, 상자 위로 멀리 튀어 나온 점들이 그 장르를 대표하는 대작이다.",
+    )
 
 st.divider()
 
@@ -191,7 +211,11 @@ else:
     st.plotly_chart(fig6, width="stretch")
     if excluded_6:
         st.caption(f"스크린수·총 관객·첫 주 관객 중 빠진 값이 있는 {excluded_6}편은 제외했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note6")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note6",
+        value="총 관객이 많은 영화일수록 원도 대체로 커서, 첫 주 흥행 성적이 최종 흥행을 상당 부분 미리 결정한다는 것을 알 수 있다.",
+    )
 
 st.divider()
 
@@ -212,7 +236,11 @@ else:
     st.plotly_chart(fig7, width="stretch")
     if excluded_7:
         st.caption(f"국가 또는 장르 값이 없는 {excluded_7}편은 제외했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note7")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note7",
+        value="안쪽 고리로 어느 나라 영화가 많은지, 바깥 고리로 그 나라가 어떤 장르를 많이 만드는지 한 그래프에서 함께 볼 수 있다.",
+    )
 
 st.divider()
 
@@ -238,4 +266,8 @@ else:
     st.caption(f"내 질문: {my_question}")
     if excluded_8:
         st.caption(f"체류일수 또는 총 관객 값이 없는 {excluded_8}편은 제외했습니다.")
-    st.text_input("이 그래프로 알 수 있는 것", key="note8")
+    st.text_input(
+        "이 그래프로 알 수 있는 것",
+        key="note8",
+        value="10위권에 오래 머문 영화일수록 총 관객도 대체로 많아, 순위 체류 기간이 흥행 규모와 함께 움직이는 경향이 있다.",
+    )
